@@ -29,19 +29,14 @@ def get_driver_results(
 
 from app.schemas.f1 import DriverResultSchema, FastestLapSchema, DriverComparisonSchema
 
-# Existing routes remain above...
 
 @router.get("/{year}/{gp}/fastest-lap", response_model=FastestLapSchema)
 def get_fastest_lap(year: int, gp: str, driver: str):
-    """
-    Fetch the fastest lap details for a specific driver in a Grand Prix.
-    Example: /drivers/2024/Monaco/fastest-lap?driver=LEC
-    """
+   
     try:
         session = fastf1.get_session(year, gp, 'R')
         session.load(telemetry=False, weather=False)
         
-        # Filter laps by driver abbreviation (e.g., 'VER', 'HAM', 'LEC')
         driver_laps = session.laps.pick_driver(driver.upper())
         if driver_laps.empty:
             raise HTTPException(status_code=4404, detail=f"No laps found for driver '{driver}'")
@@ -60,10 +55,7 @@ def get_fastest_lap(year: int, gp: str, driver: str):
 
 @router.get("/{year}/{gp}/compare", response_model=DriverComparisonSchema)
 def compare_drivers(year: int, gp: str, driver1: str, driver2: str):
-    """
-    Head-to-head comparison of fastest laps between two drivers.
-    Example: /drivers/2024/Monaco/compare?driver1=VER&driver2=NOR
-    """
+    
     try:
         session = fastf1.get_session(year, gp, 'R')
         session.load(telemetry=False, weather=False)
