@@ -11,13 +11,11 @@ router = APIRouter(
     tags=["User Favorites (SQL Database)"]
 )
 
-# 1. CREATE: Add a driver to favorites
 @router.post("/", response_model=FavoriteDriverResponseSchema, status_code=status.HTTP_201_CREATED)
 def add_favorite(fav: FavoriteDriverCreateSchema, db: Session = Depends(get_db)):
     """
     Save a driver to local SQLite database favorites list.
     """
-    # Check if already in favorites
     existing = db.query(FavoriteDriverModel).filter(FavoriteDriverModel.driver_code == fav.driver_code.upper()).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Driver '{fav.driver_code}' is already in your favorites.")
@@ -33,7 +31,6 @@ def add_favorite(fav: FavoriteDriverCreateSchema, db: Session = Depends(get_db))
     db.refresh(new_fav)
     return new_fav
 
-# 2. READ: Get all favorite drivers
 @router.get("/", response_model=List[FavoriteDriverResponseSchema])
 def get_favorites(db: Session = Depends(get_db)):
     """
@@ -41,7 +38,6 @@ def get_favorites(db: Session = Depends(get_db)):
     """
     return db.query(FavoriteDriverModel).all()
 
-# 3. DELETE: Remove a driver from favorites
 @router.delete("/{driver_code}", status_code=status.HTTP_204_NO_CONTENT)
 def remove_favorite(driver_code: str, db: Session = Depends(get_db)):
     """
