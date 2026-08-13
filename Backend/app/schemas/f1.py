@@ -36,3 +36,22 @@ class DriverComparisonSchema(BaseModel):
     driver_1: FastestLapSchema
     driver_2: FastestLapSchema
     delta_seconds: float
+
+from datetime import datetime
+
+class FavoriteDriverCreateSchema(BaseModel):
+    driver_code: str = Field(..., example="VER")
+    driver_name: str = Field(..., example="Max Verstappen")
+    team_name: str = Field(..., example="Red Bull Racing")
+    user_notes: Optional[str] = Field(None, example="My favorite driver")
+
+class FavoriteDriverResponseSchema(BaseModel):
+    id: int
+    driver_code: str
+    driver_name: str
+    team_name: str
+    user_notes: Optional[str]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True  
