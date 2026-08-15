@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import { getSchedule, getDriverResults, getFavorites, addFavorite, deleteFavorite } from './api';
 
@@ -11,39 +11,49 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [selectedGp, setSelectedGp] = useState('Monaco');
 
-  
   const currentYear = 2026;
   const availableYears = Array.from(
-    { length: currentYear - 1950 + 1 }, 
+    { length: currentYear - 1950 + 1 },
     (_, i) => currentYear - i
-);  
+  );
 
-  useEffect(() => {
-    fetchScheduleAndFavorites(selectedYear);
+ useEffect(() => {
+    let isMounted = true;
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [schedData, favsData] = await Promise.all([
+          getSchedule(selectedYear),
+          getFavorites(),
+        ]);
+        if (isMounted) {
+          setSchedule(schedData || []);
+          setFavorites(favsData || []);
+        }
+      } catch (err) {
+        console.error("Error fetching schedule:", err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+   
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedYear]);
-
-  const fetchScheduleAndFavorites = async (year) => {
-    try {
-      setLoading(true);
-      const [schedData, favsData] = await Promise.all([
-        getSchedule(year),
-        getFavorites(),
-      ]);
-      setSchedule(schedData);
-      setFavorites(favsData);
-    } catch (err) {
-      console.error("Error fetching schedule:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadDriverResults = async (gp, year = selectedYear) => {
     try {
       setLoading(true);
       setSelectedGp(gp);
       const data = await getDriverResults(year, gp);
-      setDrivers(data);
+      setDrivers(data || []);
     } catch (err) {
       console.error("Error fetching driver results:", err);
     } finally {
@@ -52,7 +62,9 @@ export default function App() {
   };
 
   const handleToggleFavorite = async (driver) => {
-    const isFav = favorites.find((f) => f.driver_code === driver.DriverNumber || f.driver_name === driver.BroadcastName);
+    const isFav = favorites.find(
+      (f) => f.driver_code === driver.DriverNumber || f.driver_name === driver.BroadcastName
+    );
     try {
       if (isFav) {
         await deleteFavorite(isFav.driver_code);
@@ -78,12 +90,12 @@ export default function App() {
           <h1>🏎️ FastF1 Live Dashboard</h1>
           <span className="badge">FastAPI + React</span>
         </div>
-        
+
         {/* Season Selector Dropdown */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
           <label style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Season:</label>
-          <select 
-            value={selectedYear} 
+          <select
+            value={selectedYear}
             onChange={(e) => setSelectedYear(Number(e.target.value))}
             style={{
               backgroundColor: 'var(--card-bg)',
@@ -92,11 +104,13 @@ export default function App() {
               padding: '0.5rem 1rem',
               borderRadius: '6px',
               fontSize: '1rem',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
           >
             {availableYears.map((yr) => (
-              <option key={yr} value={yr}>{yr} Season</option>
+              <option key={yr} value={yr}>
+                {yr} Season
+              </option>
             ))}
           </select>
         </div>
@@ -131,8 +145,12 @@ export default function App() {
             <div key={race.RoundNumber} className="card">
               <span className="badge">Round {race.RoundNumber}</span>
               <h3>{race.EventName}</h3>
-              <p style={{ color: 'var(--text-muted)' }}>📍 {race.Location}, {race.Country}</p>
-              <p style={{ fontSize: '0.9rem' }}>📅 {race.EventDate.split(' ')[0]}</p>
+              <p style={{ color: 'var(--text-muted)' }}>
+                📍 {race.Location}, {race.Country}
+              </p>
+              <p style={{ fontSize: '0.9rem' }}>
+                📅 {race.EventDate.split(' ')[0]}
+              </p>
               <button
                 className="btn-fav"
                 onClick={() => {
@@ -162,11 +180,17 @@ export default function App() {
             </thead>
             <tbody>
               {drivers.length === 0 ? (
-                <tr><td colSpan="6" style={{ textAlign: 'center' }}>No results loaded yet. Select a race from the calendar!</td></tr>
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center' }}>
+                    No results loaded yet. Select a race from the calendar!
+                  </td>
+                </tr>
               ) : (
                 drivers.map((d) => (
                   <tr key={d.DriverNumber}>
-                    <td><strong>P{d.Position || 'DNF'}</strong></td>
+                    <td>
+                      <strong>P{d.Position || 'DNF'}</strong>
+                    </td>
                     <td>{d.DriverNumber}</td>
                     <td>{d.BroadcastName}</td>
                     <td>{d.TeamName}</td>
@@ -176,7 +200,9 @@ export default function App() {
                         className="btn-fav"
                         onClick={() => handleToggleFavorite(d)}
                       >
-                        {favorites.some((f) => f.driver_code === d.DriverNumber) ? '★ Favorited' : '☆ Save'}
+                        {favorites.some((f) => f.driver_code === d.DriverNumber)
+                          ? '★ Favorited'
+                          : '☆ Save'}
                       </button>
                     </td>
                   </tr>
@@ -194,9 +220,13 @@ export default function App() {
           ) : (
             favorites.map((fav) => (
               <div key={fav.id} className="card">
-                <h3>{fav.driver_name} (#{fav.driver_code})</h3>
+                <h3>
+                  {fav.driver_name} (#{fav.driver_code})
+                </h3>
                 <p style={{ color: 'var(--text-muted)' }}>🏎️ {fav.team_name}</p>
-                <p style={{ fontSize: '0.85rem' }}>📝 {fav.user_notes || 'No notes'}</p>
+                <p style={{ fontSize: '0.85rem' }}>
+                  📝 {fav.user_notes || 'No notes'}
+                </p>
                 <button
                   className="btn-fav"
                   style={{ borderColor: '#ef4444', color: '#ef4444' }}
