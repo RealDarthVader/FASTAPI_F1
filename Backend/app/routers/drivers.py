@@ -1,7 +1,9 @@
+from typing import List, Optional
 import fastf1
 from fastapi import APIRouter, HTTPException, Query
-from typing import List, Optional
+import pandas as pd
 from app.schemas.f1 import DriverResultSchema
+
 router = APIRouter(
     prefix="/drivers",
     tags=["Drivers & Standings"]
@@ -13,79 +15,41 @@ def get_driver_results(
     gp: str,
     team: Optional[str] = Query(None, description="Filter drivers by team name (e.g., 'Ferrari', 'Red Bull')")
 ):
+    """
+    Fetch driver race results for a specific Grand Prix.
+    Supports both modern (2018+) and historic (1950-2017) sessions.
+    """
     try:
         session = fastf1.get_session(year, gp, 'R')
         session.load(telemetry=False, weather=False)
         
-        results = session.results[['DriverNumber', 'BroadcastName', 'TeamName', 'Position', 'Points']]
-        records = results.to_dict(orient="records")
+        results = session.results.copy()
+        
+        # Determine the best available driver name column across eras
+        if 'BroadcastName' in results.columns and results['BroadcastName'].dropna().any():
+            driver_col = results['BroadcastName']
+        elif 'FullName' in results.columns and results['FullName'].dropna().any():
+            driver_col = results['FullName']
+        elif 'GivenName' in results.columns and 'FamilyName' in results.columns:
+            driver_col = results['GivenName'].fillna('') + ' ' + results['FamilyName'].fillna('')
+        elif 'Abbreviation' in results.columns:
+            driver_col = results['Abbreviation']
+        else:
+            driver_col = results['DriverNumber']
+            
+        results['BroadcastName'] = driver_col.fillna('Unknown Driver')
+        
+        # Ensure fallback for required columns
+        for col in ['DriverNumber', 'BroadcastName', 'TeamName', 'Position', 'Points']:
+            if col not in results.columns:
+                results[col] = None
+
+        cleaned_results = results[['DriverNumber', 'BroadcastName', 'TeamName', 'Position', 'Points']]
+        records = cleaned_results.to_dict(orient="records")
         
         if team:
-            records = [d for d in records if team.lower() in d['TeamName'].lower()]
+            records = [d for d in records if d.get('TeamName') and team.lower() in str(d['TeamName']).lower()]
             
         return records
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to fetch session: {str(e)}")
-
-from app.schemas.f1 import DriverResultSchema, FastestLapSchema, DriverComparisonSchema
-
-
-@router.get("/{year}/{gp}/fastest-lap", response_model=FastestLapSchema)
-def get_fastest_lap(year: int, gp: str, driver: str):
-   
-    try:
-        session = fastf1.get_session(year, gp, 'R')
-        session.load(telemetry=False, weather=False)
-        
-        driver_laps = session.laps.pick_driver(driver.upper())
-        if driver_laps.empty:
-            raise HTTPException(status_code=4404, detail=f"No laps found for driver '{driver}'")
-            
-        fastest_lap = driver_laps.pick_fastest()
-        
-        return {
-            "Driver": fastest_lap['Driver'],
-            "LapTimeSeconds": fastest_lap['LapTime'].total_seconds(),
-            "LapNumber": int(fastest_lap['LapNumber']),
-            "Compound": str(fastest_lap['Compound'])
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/{year}/{gp}/compare", response_model=DriverComparisonSchema)
-def compare_drivers(year: int, gp: str, driver1: str, driver2: str):
-    
-    try:
-        session = fastf1.get_session(year, gp, 'R')
-        session.load(telemetry=False, weather=False)
-        
-        lap1 = session.laps.pick_driver(driver1.upper()).pick_fastest()
-        lap2 = session.laps.pick_driver(driver2.upper()).pick_fastest()
-        
-        t1 = lap1['LapTime'].total_seconds()
-        t2 = lap2['LapTime'].total_seconds()
-        
-        d1_data = {
-            "Driver": lap1['Driver'],
-            "LapTimeSeconds": t1,
-            "LapNumber": int(lap1['LapNumber']),
-            "Compound": str(lap1['Compound'])
-        }
-        
-        d2_data = {
-            "Driver": lap2['Driver'],
-            "LapTimeSeconds": t2,
-            "LapNumber": int(lap2['LapNumber']),
-            "Compound": str(lap2['Compound'])
-        }
-        
-        return {
-            "event": session.event['EventName'],
-            "year": year,
-            "driver_1": d1_data,
-            "driver_2": d2_data,
-            "delta_seconds": round(abs(t1 - t2), 3)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Comparison failed: {str(e)}")
