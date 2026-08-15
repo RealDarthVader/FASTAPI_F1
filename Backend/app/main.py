@@ -15,10 +15,15 @@ app = FastAPI(
     version="0.5.0"
 )
 
+# origins = [
+#     "http://localhost:3000",
+#     "http://localhost:5173",  
+#     "http://127.0.0.1:5173",
+# ]
 origins = [
+    "http://localhost:5173",
     "http://localhost:3000",
-    "http://localhost:5173",  
-    "http://127.0.0.1:5173",
+    "https://*.vercel.app",  
 ]
 
 app.add_middleware(
