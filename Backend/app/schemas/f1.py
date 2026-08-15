@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Optional
+from typing import List, Optional
 
 class DriverResultSchema(BaseModel):
     driver_number: str = Field(..., alias="DriverNumber")
@@ -55,3 +56,10 @@ class FavoriteDriverResponseSchema(BaseModel):
 
     class Config:
         from_attributes = True  
+
+class SearchResultsSchema(BaseModel):
+    query: str
+    year: int
+    matching_events: List[RaceEventSchema]
+    matching_drivers: List[DriverResultSchema]
+    total_matches: int
