@@ -1,11 +1,12 @@
 {
+  "version": 2,
   "rewrites": [
     {
-      "source": "/api/:path*",
+      "source": "/(races|drivers|favorites|search|docs|openapi.json)(.*)",
       "destination": "/api/index.py"
     },
     {
-      "source": "/(races|drivers|favorites|search|docs|openapi.json)(.*)",
+      "source": "/api/(.*)",
       "destination": "/api/index.py"
     },
     {
