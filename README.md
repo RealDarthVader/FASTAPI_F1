@@ -235,4 +235,3 @@ This project is open-source. A license file can be added to the repository if yo
 
 ---
 
-Built with ❤️ for Formula 1 and backend engineering.
