@@ -20,23 +20,24 @@ app = FastAPI(
     version="0.5.0"
 )
 
-# CORS Setup
+# CORS Setup - Permitting Render, Vercel, and Localhost
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "https://fastapi-f1.vercel.app",
+    "https://fastapi-f1-frontend.onrender.com",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_origin_regex=r"https://.*\.onrender\.com|https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# FastF1 Cache Setup (Writable /tmp directory for Serverless)
+# FastF1 Cache Setup
 CACHE_DIR = os.path.join(tempfile.gettempdir(), ".fastf1_cache")
 os.makedirs(CACHE_DIR, exist_ok=True)
 fastf1.Cache.enable_cache(CACHE_DIR)
